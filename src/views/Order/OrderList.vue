@@ -36,7 +36,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in orders" :key="order.id">
+          <tr v-for="order in paginatedOrders" :key="order.id">
             <td><code>{{ order.id }}</code></td>
             <td>
               <div class="fw-semibold">{{ order.product.name }}</div>
@@ -58,17 +58,82 @@
           </tr>
         </tbody>
       </table>
+      <nav
+        v-if="totalPages > 1"
+        class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 pb-3"
+        aria-label="Order pages"
+      >
+        <p class="mb-0" aria-live="polite">
+          Showing {{ (currentPage - 1) * pageSize + 1 }}–{{
+            Math.min(currentPage * pageSize, orders.length)
+          }}
+          of {{ orders.length }} orders
+        </p>
+        <ul class="pagination mb-0">
+          <li class="page-item" :class="{ disabled: currentPage === 1 }">
+            <button
+              class="page-link"
+              type="button"
+              :disabled="currentPage === 1"
+              aria-label="Previous order page"
+              @click="currentPage--"
+            >
+              Previous
+            </button>
+          </li>
+          <li
+            v-for="page in totalPages"
+            :key="page"
+            class="page-item"
+            :class="{ active: currentPage === page }"
+          >
+            <button
+              class="page-link"
+              type="button"
+              :aria-label="`Order page ${page}`"
+              :aria-current="currentPage === page ? 'page' : undefined"
+              @click="currentPage = page"
+            >
+              {{ page }}
+            </button>
+          </li>
+          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+            <button
+              class="page-link"
+              type="button"
+              :disabled="currentPage === totalPages"
+              aria-label="Next order page"
+              @click="currentPage++"
+            >
+              Next
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
   </section>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import orderService from '@/services/orderService'
 
 const orders = ref([])
+const currentPage = ref(1)
+const pageSize = 10
 const loading = ref(false)
 const errorMessage = ref('')
+const totalPages = computed(() => Math.ceil(orders.value.length / pageSize))
+const paginatedOrders = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize
+  return orders.value.slice(startIndex, startIndex + pageSize)
+})
+
+watch(totalPages, (pageCount) => {
+  if (currentPage.value > pageCount) {
+    currentPage.value = Math.max(pageCount, 1)
+  }
+})
 
 onMounted(fetchOrders)
 

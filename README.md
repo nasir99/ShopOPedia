@@ -59,6 +59,9 @@ firebase deploy --only firestore:rules
 Product reads remain public for the storefront; creating, updating, and deleting products
 requires the admin role.
 
+The home page displays up to 8 products per page. The admin product-management and orders
+pages display up to 10 records per page.
+
 ## Customer orders
 
 Submitting the order form on a product card saves an order document in the Firestore

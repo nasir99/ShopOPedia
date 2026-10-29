@@ -91,7 +91,7 @@
         </div>
         <div v-else-if="filteredProductList.length > 0" class="row g-4 pb-4">
           <ProductCard
-            v-for="product in filteredProductList"
+            v-for="product in paginatedProductList"
             :key="product.id"
             :product="product"
             @view-details="showProductDetails"
@@ -101,6 +101,58 @@
         <div v-else role="status" aria-live="polite">
           <p class="h3 text-center">No products found.</p>
         </div>
+        <nav
+          v-if="totalPages > 1"
+          class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 pb-4"
+          aria-label="Product pages"
+        >
+          <p class="mb-0" aria-live="polite">
+            Showing {{ (currentPage - 1) * pageSize + 1 }}–{{
+              Math.min(currentPage * pageSize, filteredProductList.length)
+            }}
+            of {{ filteredProductList.length }} products
+          </p>
+          <ul class="pagination mb-0">
+            <li class="page-item" :class="{ disabled: currentPage === 1 }">
+              <button
+                class="page-link"
+                type="button"
+                :disabled="currentPage === 1"
+                aria-label="Previous product page"
+                @click="currentPage--"
+              >
+                Previous
+              </button>
+            </li>
+            <li
+              v-for="page in totalPages"
+              :key="page"
+              class="page-item"
+              :class="{ active: currentPage === page }"
+            >
+              <button
+                class="page-link"
+                type="button"
+                :aria-label="`Product page ${page}`"
+                :aria-current="currentPage === page ? 'page' : undefined"
+                @click="currentPage = page"
+              >
+                {{ page }}
+              </button>
+            </li>
+            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+              <button
+                class="page-link"
+                type="button"
+                :disabled="currentPage === totalPages"
+                aria-label="Next product page"
+                @click="currentPage++"
+              >
+                Next
+              </button>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
 
@@ -266,7 +318,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import productService from '@/services/productService'
 import orderService from '@/services/orderService'
 import ProductCard from '@/components/Product/ProductCard.vue'
@@ -284,6 +336,8 @@ const errorMessage = ref('')
 const searchValue = ref('')
 const selectedSortOption = ref(SORT_OPTIONS[0])
 const selectedCategory = ref('ALL')
+const currentPage = ref(1)
+const pageSize = 8
 const categoryList = ref(['ALL', ...PRODUCT_CATEGORIES])
 const selectedProduct = ref(null)
 const productDetailsDialog = ref(null)
@@ -435,6 +489,22 @@ const filteredProductList = computed(() => {
   }
 
   return tempArray
+})
+
+const totalPages = computed(() => Math.ceil(filteredProductList.value.length / pageSize))
+const paginatedProductList = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize
+  return filteredProductList.value.slice(startIndex, startIndex + pageSize)
+})
+
+watch([searchValue, selectedCategory, selectedSortOption], () => {
+  currentPage.value = 1
+})
+
+watch(totalPages, (pageCount) => {
+  if (currentPage.value > pageCount) {
+    currentPage.value = Math.max(pageCount, 1)
+  }
 })
 </script>
 <style scoped>

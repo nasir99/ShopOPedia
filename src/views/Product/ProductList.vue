@@ -41,7 +41,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="product in products" :key="product.id">
+              <tr v-for="product in paginatedProducts" :key="product.id">
                 <td class="ps-3">
                   <div class="d-flex align-items-center">
                     <img
@@ -130,12 +130,64 @@
             </tbody>
           </table>
         </div>
+        <nav
+          v-if="totalPages > 1"
+          class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-3"
+          aria-label="Product pages"
+        >
+          <p class="mb-0" aria-live="polite">
+            Showing {{ (currentPage - 1) * pageSize + 1 }}–{{
+              Math.min(currentPage * pageSize, products.length)
+            }}
+            of {{ products.length }} products
+          </p>
+          <ul class="pagination mb-0">
+            <li class="page-item" :class="{ disabled: currentPage === 1 }">
+              <button
+                class="page-link"
+                type="button"
+                :disabled="currentPage === 1"
+                aria-label="Previous product page"
+                @click="currentPage--"
+              >
+                Previous
+              </button>
+            </li>
+            <li
+              v-for="page in totalPages"
+              :key="page"
+              class="page-item"
+              :class="{ active: currentPage === page }"
+            >
+              <button
+                class="page-link"
+                type="button"
+                :aria-label="`Product page ${page}`"
+                :aria-current="currentPage === page ? 'page' : undefined"
+                @click="currentPage = page"
+              >
+                {{ page }}
+              </button>
+            </li>
+            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+              <button
+                class="page-link"
+                type="button"
+                :disabled="currentPage === totalPages"
+                aria-label="Next product page"
+                @click="currentPage++"
+              >
+                Next
+              </button>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
   </div>
 </template>
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import productService from '@/services/productService'
 import { useSwal } from '@/composibles/useSwal'
 import { APP_ROUTE_NAMES } from '@/constants/routeNames'
@@ -144,8 +196,21 @@ const router = useRouter()
 const { showSuccess, showError, showConfirm } = useSwal()
 
 const products = ref([])
+const currentPage = ref(1)
+const pageSize = 10
 const loading = ref(false)
 const errorMessage = ref('')
+const totalPages = computed(() => Math.ceil(products.value.length / pageSize))
+const paginatedProducts = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize
+  return products.value.slice(startIndex, startIndex + pageSize)
+})
+
+watch(totalPages, (pageCount) => {
+  if (currentPage.value > pageCount) {
+    currentPage.value = Math.max(pageCount, 1)
+  }
+})
 
 onMounted(() => {
   fetchProducts()
