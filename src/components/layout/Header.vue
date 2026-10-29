@@ -32,6 +32,11 @@
              Add product
             </RouterLink>
           </li>
+          <li v-if="authStore.isAdmin" class="nav-item">
+            <RouterLink class="nav-link" :to="{ name: APP_ROUTE_NAMES.ORDER_LIST }" @click="isNavigationOpen = false">
+              Orders
+            </RouterLink>
+          </li>
           <li class="nav-item">
             <RouterLink class="nav-link" :to="{ name: APP_ROUTE_NAMES.CONTACT_US }" @click="isNavigationOpen = false">
               Contact us

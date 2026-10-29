@@ -58,3 +58,23 @@ firebase deploy --only firestore:rules
 
 Product reads remain public for the storefront; creating, updating, and deleting products
 requires the admin role.
+
+## Customer orders
+
+Submitting the order form on a product card saves an order document in the Firestore
+`orders` collection before showing the email links. Each document includes a customer
+contact/delivery snapshot, product name/category/price snapshot, quantity, a `pending`
+status, and a server-generated creation timestamp. The customer can then open Gmail or
+their default mail app to send the same order details to the shop.
+
+Only admins can read orders. The admin navigation includes an **Orders** page at `/orders`,
+which lists saved orders newest first. The Firestore rules validate public order submissions
+and restrict reads to admins. Deploy updated rules before using this feature:
+
+```sh
+firebase deploy --only firestore:rules
+```
+
+Order forms contain personal information and the create rule permits unauthenticated
+submissions. For a public production storefront, add Firebase App Check and abuse controls
+before collecting real customer data.

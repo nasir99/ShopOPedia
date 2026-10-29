@@ -20,12 +20,30 @@
           <span class="fw-semibold">${{ product.salePrice || product.price }}</span>
           <del v-if="product.salePrice" class="small text-muted">${{ product.price }}</del>
         </div>
+        <button
+          class="btn btn-outline-primary mt-3"
+          type="button"
+          :aria-label="`View details for ${product.name}`"
+          @click="$emit('view-details', product)"
+        >
+          View details
+        </button>
+        <button
+          class="btn btn-primary mt-2"
+          type="button"
+          :aria-label="`Order ${product.name}`"
+          @click="$emit('order', product)"
+        >
+          Order now
+        </button>
       </div>
     </article>
   </div>
 </template>
 
 <script setup>
+defineEmits(['view-details', 'order'])
+
 defineProps({
   product: {
     type: Object,

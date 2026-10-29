@@ -15,6 +15,45 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /orders/{orderId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          'customer', 'product', 'quantity', 'status', 'createdAt'
+        ])
+        && request.resource.data.customer is map
+        && request.resource.data.customer.keys().hasOnly([
+          'name', 'email', 'phone', 'deliveryAddress'
+        ])
+        && request.resource.data.customer.name is string
+        && request.resource.data.customer.name.size() > 0
+        && request.resource.data.customer.name.size() <= 120
+        && request.resource.data.customer.email is string
+        && request.resource.data.customer.email.size() <= 254
+        && request.resource.data.customer.phone is string
+        && request.resource.data.customer.phone.size() <= 40
+        && request.resource.data.customer.deliveryAddress is string
+        && request.resource.data.customer.deliveryAddress.size() > 0
+        && request.resource.data.customer.deliveryAddress.size() <= 500
+        && request.resource.data.product is map
+        && request.resource.data.product.keys().hasOnly([
+          'id', 'name', 'category', 'unitPrice'
+        ])
+        && request.resource.data.product.id is string
+        && request.resource.data.product.name is string
+        && request.resource.data.product.name.size() > 0
+        && request.resource.data.product.name.size() <= 160
+        && request.resource.data.product.category is string
+        && request.resource.data.product.category.size() <= 100
+        && request.resource.data.product.unitPrice is number
+        && request.resource.data.product.unitPrice > 0
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity >= 1
+        && request.resource.data.quantity <= 99
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow read: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
     match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow create: if isSignedIn()
