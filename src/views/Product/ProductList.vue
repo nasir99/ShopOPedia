@@ -72,10 +72,10 @@
                       class="fw-semibold small"
                       :class="{ 'text-decoration-line-through text-muted': product.salePrice }"
                     >
-                      ${{ product.price }}
+                      {{ formatSEK(product.price) }}
                     </span>
                     <span v-if="product.salePrice" class="text-danger small">
-                      ${{ product.salePrice }}
+                      {{ formatSEK(product.salePrice) }}
                     </span>
                   </div>
                 </td>
@@ -205,6 +205,10 @@ const paginatedProducts = computed(() => {
   const startIndex = (currentPage.value - 1) * pageSize
   return products.value.slice(startIndex, startIndex + pageSize)
 })
+const formatSEK = (amount) =>
+  new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK' }).format(
+    Number(amount) || 0,
+  )
 
 watch(totalPages, (pageCount) => {
   if (currentPage.value > pageCount) {

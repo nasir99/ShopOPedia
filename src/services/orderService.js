@@ -1,7 +1,18 @@
-import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore'
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+} from 'firebase/firestore'
 import { db } from '@/utility/firebaseConfig'
 
 const orderCollection = collection(db, 'orders')
+
+export const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'completed', 'cancelled']
 
 export default {
   async createOrder(orderData) {
@@ -22,5 +33,13 @@ export default {
       id: orderDoc.id,
       ...orderDoc.data(),
     }))
+  },
+
+  async updateOrderStatus(orderId, status) {
+    if (!ORDER_STATUSES.includes(status)) {
+      throw new Error(`Unsupported order status: ${status}`)
+    }
+
+    await updateDoc(doc(orderCollection, orderId), { status })
   },
 }

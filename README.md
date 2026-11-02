@@ -67,12 +67,17 @@ pages display up to 10 records per page.
 Submitting the order form on a product card saves an order document in the Firestore
 `orders` collection before showing the email links. Each document includes a customer
 contact/delivery snapshot, product name/category/price snapshot, quantity, a `pending`
-status, and a server-generated creation timestamp. The customer can then open Gmail or
-their default mail app to send the same order details to the shop.
+status, the `swish` payment method, and a server-generated creation timestamp. Catalog prices
+are treated as Swedish kronor (SEK). After saving, the customer sees the Swish recipient,
+order total, and order ID to enter as the payment message, then can open Gmail or their
+default mail app to send the order details to the shop. This is a manual transfer; the app
+does not initiate or automatically verify Swish payments.
 
 Only admins can read orders. The admin navigation includes an **Orders** page at `/orders`,
-which lists saved orders newest first. The Firestore rules validate public order submissions
-and restrict reads to admins. Deploy updated rules before using this feature:
+which lists saved orders newest first. Admins can update an order's status to pending,
+confirmed, processing, completed, or cancelled from the order list. Firestore rules limit
+admin order updates to the status field and validate the allowed values. Deploy updated rules
+before using this feature:
 
 ```sh
 firebase deploy --only firestore:rules

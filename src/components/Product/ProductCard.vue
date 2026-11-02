@@ -17,8 +17,10 @@
         <p class="text-muted small mb-2">{{ product.category }}</p>
         <p class="card-text flex-grow-1">{{ product.description }}</p>
         <div class="d-flex align-items-baseline gap-2">
-          <span class="fw-semibold">${{ product.salePrice || product.price }}</span>
-          <del v-if="product.salePrice" class="small text-muted">${{ product.price }}</del>
+          <span class="fw-semibold">{{ formatSEK(product.salePrice || product.price) }}</span>
+          <del v-if="product.salePrice" class="small text-muted">{{
+            formatSEK(product.price)
+          }}</del>
         </div>
         <button
           class="btn btn-outline-primary mt-3"
@@ -43,6 +45,11 @@
 
 <script setup>
 defineEmits(['view-details', 'order'])
+
+const formatSEK = (amount) =>
+  new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK' }).format(
+    Number(amount) || 0,
+  )
 
 defineProps({
   product: {

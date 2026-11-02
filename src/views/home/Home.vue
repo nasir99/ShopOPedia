@@ -186,10 +186,10 @@
           </p>
           <div class="d-flex align-items-baseline gap-2 mb-3">
             <span class="fw-semibold fs-5">
-              ${{ selectedProduct.salePrice || selectedProduct.price }}
+              {{ formatSEK(selectedProduct.salePrice || selectedProduct.price) }}
             </span>
             <del v-if="selectedProduct.salePrice" class="text-muted">
-              ${{ selectedProduct.price }}
+              {{ formatSEK(selectedProduct.price) }}
             </del>
           </div>
           <div v-if="selectedProduct.tags?.length">
@@ -218,13 +218,23 @@
           >
             <h3 id="order-form-title" class="h5">Your order details</h3>
             <p class="small text-muted">
-              Submit your request to save it for the shop admin, then send the order by email.
+              Submit your request to save it for the shop admin, then pay using Swish and email
+              the order details.
             </p>
             <div v-if="orderError" class="alert alert-danger" role="alert">
               {{ orderError }}
             </div>
             <div v-if="savedOrderId" class="alert alert-success" role="status">
-              Order request {{ savedOrderId }} is saved. Email the shop to complete your request.
+              Order request {{ savedOrderId }} is saved.
+              <hr />
+              <h4 class="h6">Pay by Swish</h4>
+              <p class="mb-1">Recipient: <strong>{{ swishNumber }}</strong></p>
+              <p class="mb-1">Amount: <strong>{{ formatSEK(orderTotal) }}</strong></p>
+              <p class="mb-1">Message/reference: <strong>{{ savedOrderId }}</strong></p>
+              <p class="small mb-0">
+                Open the Swish app and enter these details. Payment is not automatically
+                verified; the shop will confirm it separately.
+              </p>
             </div>
             <div class="mb-3">
               <label for="order-customer-name" class="form-label">Your name</label>
@@ -347,6 +357,11 @@ const orderGmailUrl = ref('')
 const savingOrder = ref(false)
 const savedOrderId = ref('')
 const orderError = ref('')
+const swishNumber = '+46 702530515'
+const orderTotal = computed(() => {
+  const product = selectedProduct.value
+  return product ? Number(product.salePrice || product.price) * orderForm.quantity : 0
+})
 const orderForm = reactive({
   name: '',
   email: '',
@@ -386,6 +401,11 @@ const closeProductDetails = () => {
   productDetailsDialog.value?.close()
 }
 
+const formatSEK = (amount) =>
+  new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK' }).format(
+    Number(amount) || 0,
+  )
+
 const submitOrder = async () => {
   const product = selectedProduct.value
   if (!product || savingOrder.value || savedOrderId.value) return
@@ -408,6 +428,7 @@ const submitOrder = async () => {
         unitPrice: Number(product.salePrice || product.price),
       },
       quantity: orderForm.quantity,
+      paymentMethod: 'swish',
     })
 
     savedOrderId.value = orderId
@@ -419,7 +440,11 @@ const submitOrder = async () => {
       `Product: ${product.name}`,
       `Category: ${product.category || 'Not specified'}`,
       `Quantity: ${orderForm.quantity}`,
-      `Unit price: $${product.salePrice || product.price}`,
+      `Unit price: ${formatSEK(product.salePrice || product.price)}`,
+      `Total: ${formatSEK(Number(product.salePrice || product.price) * orderForm.quantity)}`,
+      'Payment method: Swish',
+      `Swish recipient: ${swishNumber}`,
+      `Swish payment reference: ${orderId}`,
       '',
       'Customer details',
       `Name: ${orderForm.name}`,

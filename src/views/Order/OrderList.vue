@@ -29,6 +29,7 @@
             <th scope="col">Order</th>
             <th scope="col">Product</th>
             <th scope="col">Quantity</th>
+            <th scope="col">Payment</th>
             <th scope="col">Customer</th>
             <th scope="col">Delivery address</th>
             <th scope="col">Submitted</th>
@@ -41,10 +42,16 @@
             <td>
               <div class="fw-semibold">{{ order.product.name }}</div>
               <small class="text-muted">
-                {{ order.product.category }} · ${{ order.product.unitPrice }} each
+                {{ order.product.category }} · {{ formatSEK(order.product.unitPrice) }} each
               </small>
             </td>
             <td>{{ order.quantity }}</td>
+            <td>
+              <div>{{ order.paymentMethod === 'swish' ? 'Swish' : 'Not specified' }}</div>
+              <small class="text-muted">
+                {{ formatSEK(order.product.unitPrice * order.quantity) }}
+              </small>
+            </td>
             <td>
               <div>{{ order.customer.name }}</div>
               <a :href="`mailto:${order.customer.email}`">{{ order.customer.email }}</a>
@@ -54,7 +61,26 @@
             </td>
             <td>{{ order.customer.deliveryAddress }}</td>
             <td>{{ formatDate(order.createdAt) }}</td>
-            <td><span class="badge text-bg-secondary">{{ order.status }}</span></td>
+            <td>
+              <label class="visually-hidden" :for="`order-status-${order.id}`">
+                Status for order {{ order.id }}
+              </label>
+              <select
+                :id="`order-status-${order.id}`"
+                class="form-select form-select-sm"
+                :value="order.status"
+                :disabled="updatingOrderIds.has(order.id)"
+                :aria-label="`Status for order ${order.id}`"
+                @change="updateOrderStatus(order, $event.target.value)"
+              >
+                <option v-for="status in ORDER_STATUSES" :key="status" :value="status">
+                  {{ statusLabels[status] }}
+                </option>
+              </select>
+              <span v-if="updatingOrderIds.has(order.id)" class="visually-hidden" role="status">
+                Saving order status
+              </span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -111,18 +137,34 @@
         </ul>
       </nav>
     </div>
+    <div v-if="statusError" class="alert alert-danger mt-3" role="alert">
+      {{ statusError }}
+    </div>
+    <p v-if="statusMessage" class="visually-hidden" role="status" aria-live="polite">
+      {{ statusMessage }}
+    </p>
   </section>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import orderService from '@/services/orderService'
+import orderService, { ORDER_STATUSES } from '@/services/orderService'
 
 const orders = ref([])
 const currentPage = ref(1)
 const pageSize = 10
 const loading = ref(false)
 const errorMessage = ref('')
+const statusError = ref('')
+const statusMessage = ref('')
+const updatingOrderIds = ref(new Set())
+const statusLabels = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  processing: 'Processing',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+}
 const totalPages = computed(() => Math.ceil(orders.value.length / pageSize))
 const paginatedOrders = computed(() => {
   const startIndex = (currentPage.value - 1) * pageSize
@@ -151,7 +193,35 @@ async function fetchOrders() {
   }
 }
 
+async function updateOrderStatus(order, status) {
+  const previousStatus = order.status
+  statusError.value = ''
+  statusMessage.value = ''
+  order.status = status
+  updatingOrderIds.value = new Set([...updatingOrderIds.value, order.id])
+
+  try {
+    await orderService.updateOrderStatus(order.id, status)
+    statusMessage.value = `Order ${order.id} status updated to ${statusLabels[status]}.`
+  } catch (error) {
+    console.error(`Failed to update order ${order.id} status`, error)
+    order.status = previousStatus
+    statusError.value = `Status for order ${order.id} could not be updated. Please try again.`
+  } finally {
+    const remainingIds = new Set(updatingOrderIds.value)
+    remainingIds.delete(order.id)
+    updatingOrderIds.value = remainingIds
+  }
+}
+
 function formatDate(timestamp) {
   return timestamp?.toDate ? timestamp.toDate().toLocaleString() : 'Just now'
+}
+
+function formatSEK(amount) {
+  return new Intl.NumberFormat('sv-SE', {
+    style: 'currency',
+    currency: 'SEK',
+  }).format(Number(amount) || 0)
 }
 </script>
