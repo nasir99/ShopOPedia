@@ -5,14 +5,14 @@ export function useSwal() {
     return await Swal.fire(options)
   }
 
-  const showSuccess = async (message) => {
+  const showSuccess = async (message, timer = 1500) => {
     return await showAlert({
       title: 'Success!',
       text: message,
       icon: 'success',
       position: 'top-end',
       showConfirmButton: false,
-      timer: 1500,
+      timer,
     })
   }
 

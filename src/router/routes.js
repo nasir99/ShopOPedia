@@ -8,6 +8,7 @@ import SignUp from '@/views/auth/SignUp.vue'
 import ProductList from '@/views/Product/ProductList.vue'
 import ProductCreate from '@/views/Product/ProductCreate.vue'
 import OrderList from '@/views/Order/OrderList.vue'
+import AdminInsights from '@/views/Admin/AdminInsights.vue'
 import { APP_ROUTE_NAMES } from '@/constants/routeNames.js'
 import { ROLE_ADMIN } from '@/constants/appConstants.js'
 import { useAuthStore } from '@/stores/authStore.js'
@@ -82,6 +83,12 @@ const router = createRouter({
       name: APP_ROUTE_NAMES.ORDER_LIST,
       component: OrderList,
       meta: { title: 'Customer orders', noindex: true, requiresAuth: true, roles: [ROLE_ADMIN] },
+    },
+    {
+      path: '/admin/insights',
+      name: APP_ROUTE_NAMES.ADMIN_INSIGHTS,
+      component: AdminInsights,
+      meta: { title: 'Shop insights', noindex: true, requiresAuth: true, roles: [ROLE_ADMIN] },
     },
     {
       path: '/:pathMatch(.*)*',

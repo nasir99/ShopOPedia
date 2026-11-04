@@ -37,6 +37,11 @@
               Orders
             </RouterLink>
           </li>
+          <li v-if="authStore.isAdmin" class="nav-item">
+            <RouterLink class="nav-link" :to="{ name: APP_ROUTE_NAMES.ADMIN_INSIGHTS }" @click="isNavigationOpen = false">
+              Reviews & best sellers
+            </RouterLink>
+          </li>
           <li class="nav-item">
             <RouterLink class="nav-link" :to="{ name: APP_ROUTE_NAMES.CONTACT_US }" @click="isNavigationOpen = false">
               Contact us

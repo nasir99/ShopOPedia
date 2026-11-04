@@ -40,6 +40,21 @@
               class="form-control"
               placeholder="e.g., modern, classic, luxury"
             />
+            <button
+              class="btn btn-outline-primary btn-sm mt-2"
+              type="button"
+              :disabled="generatingMetadata || loading"
+              @click="generateProductMetadata"
+            >
+              {{ generatingMetadata ? 'Generating tags and SEO…' : 'Generate AI tags and SEO' }}
+            </button>
+            <div v-if="productObj.seoTitle" class="mt-2 small" aria-live="polite">
+              <div><strong>SEO title:</strong> {{ productObj.seoTitle }}</div>
+              <div><strong>SEO description:</strong> {{ productObj.seoDescription }}</div>
+            </div>
+            <div v-if="metadataError" class="alert alert-danger mt-2" role="alert">
+              {{ metadataError }}
+            </div>
           </div>
           <div class="form-check form-switch pt-3">
             <input
@@ -51,6 +66,17 @@
             />
 
             <label class="form-check-label" for="bestseller"> Bestseller </label>
+          </div>
+          <div class="form-check mt-3">
+            <input
+              id="auto-generate-ai-metadata"
+              v-model="autoGenerateMetadata"
+              class="form-check-input"
+              type="checkbox"
+            />
+            <label class="form-check-label" for="auto-generate-ai-metadata">
+              Generate missing AI tags and SEO when saving
+            </label>
           </div>
           <div class="mt-3">
             <label for="product-category" class="form-label">Category</label>
@@ -74,9 +100,13 @@
             </div>
           </div>
           <div class="pt-3">
-            <button class="btn btn-success m-2 w-25" type="submit" :disabled="loading || isImageLoading">
+            <button
+              class="btn btn-success m-2 w-25"
+              type="submit"
+              :disabled="loading || isImageLoading || generatingMetadata"
+            >
               <span
-                v-if="loading || isImageLoading"
+                v-if="loading || isImageLoading || generatingMetadata"
                 class="spinner-border spinner-border-sm me-2"
               ></span
               >Submit
@@ -109,11 +139,16 @@ import { useSwal } from '@/composibles/useSwal'
 import productService from '@/services/productService'
 import { APP_ROUTE_NAMES } from '@/constants/routeNames'
 import { uploadToCloudinary } from '@/utility/cloudinary'
+import aiService from '@/services/aiService'
 const { showSuccess, showError, showConfirm } = useSwal()
 const router = useRouter()
 const route = useRoute()
+const productIdForUpdate = route.params.id
 const loading = ref(false)
 const isImageLoading = ref(false)
+const generatingMetadata = ref(false)
+const autoGenerateMetadata = ref(!productIdForUpdate)
+const metadataError = ref('')
 const errorList = reactive([])
 const productObj = reactive({
   name: '',
@@ -124,15 +159,20 @@ const productObj = reactive({
   isBestSeller: false,
   category: '',
   image: 'https://placehold.co/600x400',
+  seoTitle: '',
+  seoDescription: '',
+  ogTitle: '',
+  ogDescription: '',
+  structuredData: null,
 })
-const productIdForUpdate = route.params.id
-
 onMounted(async () => {
   if (!productIdForUpdate) return
   loading.value = true
   try {
     const product = await productService.getProductById(productIdForUpdate)
-    Object.assign(productObj, { ...product, tags: product.tags.join(', ') })
+    Object.assign(productObj, { ...product, tags: (product.tags || []).join(', ') })
+    autoGenerateMetadata.value =
+      !product.seoTitle || !product.seoDescription || !product.structuredData
   } catch (e) {
     console.log(e)
   } finally {
@@ -157,6 +197,11 @@ async function handleSubmit() {
     }
 
     if (!errorList.length) {
+      if (autoGenerateMetadata.value) {
+        await generateProductMetadata()
+        if (metadataError.value) return
+      }
+
       const productData = {
         ...productObj,
         price: Number(productObj.price),
@@ -182,6 +227,44 @@ async function handleSubmit() {
     loading.value = false
   }
 
+}
+
+async function generateProductMetadata() {
+  if (generatingMetadata.value) return
+  generatingMetadata.value = true
+  metadataError.value = ''
+  try {
+    const result = await aiService.generateProductMetadata({
+      name: productObj.name,
+      description: productObj.description,
+      category: productObj.category,
+      price: productObj.price,
+      salePrice: productObj.salePrice,
+      tags:
+        typeof productObj.tags === 'string'
+          ? productObj.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+          : productObj.tags,
+      image: productObj.image,
+    })
+    const existingTags =
+      typeof productObj.tags === 'string'
+        ? productObj.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+        : productObj.tags
+    productObj.tags = [
+      ...new Set([...existingTags, ...(Array.isArray(result.tags) ? result.tags : [])]),
+    ].join(', ')
+    productObj.seoTitle = result.seoTitle || ''
+    productObj.seoDescription = result.seoDescription || ''
+    productObj.ogTitle = result.ogTitle || result.seoTitle || ''
+    productObj.ogDescription = result.ogDescription || result.seoDescription || ''
+    productObj.structuredData = result.structuredData || null
+  } catch (error) {
+    console.error('Failed to generate product SEO metadata', error)
+    metadataError.value =
+      'AI tags and SEO could not be generated. Disable automatic generation to save without them.'
+  } finally {
+    generatingMetadata.value = false
+  }
 }
 
 async function handleImageUpload(event) {

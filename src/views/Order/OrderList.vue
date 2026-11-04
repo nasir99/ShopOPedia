@@ -27,8 +27,8 @@
         <thead>
           <tr>
             <th scope="col">Order</th>
-            <th scope="col">Product</th>
-            <th scope="col">Quantity</th>
+            <th scope="col">Products</th>
+            <th scope="col">Items</th>
             <th scope="col">Payment</th>
             <th scope="col">Customer</th>
             <th scope="col">Delivery address</th>
@@ -40,17 +40,20 @@
           <tr v-for="order in paginatedOrders" :key="order.id">
             <td><code>{{ order.id }}</code></td>
             <td>
-              <div class="fw-semibold">{{ order.product.name }}</div>
-              <small class="text-muted">
-                {{ order.product.category }} · {{ formatSEK(order.product.unitPrice) }} each
-              </small>
+              <ul class="list-unstyled mb-0">
+                <li v-for="item in orderProducts(order)" :key="item.id">
+                  <div class="fw-semibold">{{ item.name }}</div>
+                  <small class="text-muted">
+                    {{ item.category || 'Uncategorized' }} · {{ formatSEK(item.unitPrice) }} each
+                    × {{ item.quantity }}
+                  </small>
+                </li>
+              </ul>
             </td>
-            <td>{{ order.quantity }}</td>
+            <td>{{ orderProducts(order).reduce((sum, item) => sum + item.quantity, 0) }}</td>
             <td>
               <div>{{ order.paymentMethod === 'swish' ? 'Swish' : 'Not specified' }}</div>
-              <small class="text-muted">
-                {{ formatSEK(order.product.unitPrice * order.quantity) }}
-              </small>
+              <small class="text-muted">{{ formatSEK(orderTotal(order)) }}</small>
             </td>
             <td>
               <div>{{ order.customer.name }}</div>
@@ -223,5 +226,19 @@ function formatSEK(amount) {
     style: 'currency',
     currency: 'SEK',
   }).format(Number(amount) || 0)
+}
+
+function orderProducts(order) {
+  if (Array.isArray(order.products)) return order.products
+  return order.product
+    ? [{ ...order.product, quantity: order.quantity || 1 }]
+    : []
+}
+
+function orderTotal(order) {
+  return orderProducts(order).reduce(
+    (total, item) => total + Number(item.unitPrice || 0) * Number(item.quantity || 0),
+    0,
+  )
 }
 </script>

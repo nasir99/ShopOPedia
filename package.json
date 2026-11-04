@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "functions:build": "npm --prefix functions run build"
   },
   "dependencies": {
     "pinia": "^4.0.3",

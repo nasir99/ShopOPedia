@@ -7,11 +7,27 @@
     <RouterView />
   </main>
   <Footer />
+  <ShopperPanel />
+  <AiAssistantWidget />
 </div>
 </template>
 
 <script setup>
+import { watch } from 'vue'
 import Header from './components/layout/Header.vue'
 import Footer from './components/layout/Footer.vue'
+import AiAssistantWidget from './components/Shop/AiAssistantWidget.vue'
+import ShopperPanel from './components/Shop/ShopperPanel.vue'
+import { useAuthStore } from './stores/authStore'
+import { useShopperStore } from './stores/shopperStore'
 import { RouterView } from 'vue-router'
+
+const authStore = useAuthStore()
+const shopperStore = useShopperStore()
+
+watch(
+  () => authStore.user,
+  (user) => shopperStore.loadForUser(user),
+  { immediate: true },
+)
 </script>
