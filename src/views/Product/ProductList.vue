@@ -27,6 +27,16 @@
       </div>
 
       <div class="card-body p-3">
+        <div class="mb-3">
+          <label for="product-search" class="form-label">Search products</label>
+          <input
+            id="product-search"
+            v-model.trim="searchQuery"
+            class="form-control"
+            type="search"
+            placeholder="Search by name, description, category, or tag"
+          />
+        </div>
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0 table-striped">
             <caption class="visually-hidden">Product listings with category, prices, tags, and actions</caption>
@@ -122,9 +132,9 @@
                   </button>
                 </td>
               </tr>
-              <tr v-if="products.length === 0 && !errorMessage">
+              <tr v-if="filteredProducts.length === 0 && !errorMessage">
                 <td colspan="6" class="text-center text-muted py-4">
-                  No products yet. Use Add Product to create your first listing.
+                  {{ searchQuery ? 'No products match your search.' : 'No products yet. Use Add Product to create your first listing.' }}
                 </td>
               </tr>
             </tbody>
@@ -137,9 +147,9 @@
         >
           <p class="mb-0" aria-live="polite">
             Showing {{ (currentPage - 1) * pageSize + 1 }}–{{
-              Math.min(currentPage * pageSize, products.length)
+              Math.min(currentPage * pageSize, filteredProducts.length)
             }}
-            of {{ products.length }} products
+            of {{ filteredProducts.length }} products
           </p>
           <ul class="pagination mb-0">
             <li class="page-item" :class="{ disabled: currentPage === 1 }">
@@ -196,14 +206,25 @@ const router = useRouter()
 const { showSuccess, showError, showConfirm } = useSwal()
 
 const products = ref([])
+const searchQuery = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 const loading = ref(false)
 const errorMessage = ref('')
-const totalPages = computed(() => Math.ceil(products.value.length / pageSize))
+const filteredProducts = computed(() => {
+  const search = searchQuery.value.toLocaleLowerCase()
+  if (!search) return products.value
+
+  return products.value.filter((product) =>
+    [product.name, product.description, product.category, ...(product.tags || [])]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase().includes(search)),
+  )
+})
+const totalPages = computed(() => Math.ceil(filteredProducts.value.length / pageSize))
 const paginatedProducts = computed(() => {
   const startIndex = (currentPage.value - 1) * pageSize
-  return products.value.slice(startIndex, startIndex + pageSize)
+  return filteredProducts.value.slice(startIndex, startIndex + pageSize)
 })
 const formatSEK = (amount) =>
   new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK' }).format(
@@ -214,6 +235,10 @@ watch(totalPages, (pageCount) => {
   if (currentPage.value > pageCount) {
     currentPage.value = Math.max(pageCount, 1)
   }
+})
+
+watch(searchQuery, () => {
+  currentPage.value = 1
 })
 
 onMounted(() => {

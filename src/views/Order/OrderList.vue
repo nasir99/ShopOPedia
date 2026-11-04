@@ -10,6 +10,17 @@
       </button>
     </div>
 
+    <div v-if="!loading && !errorMessage && orders.length" class="mb-3">
+      <label for="order-search" class="form-label">Search orders</label>
+      <input
+        id="order-search"
+        v-model.trim="searchQuery"
+        class="form-control"
+        type="search"
+        placeholder="Search by order ID, product, customer, email, phone, or status"
+      />
+    </div>
+
     <div v-if="loading" class="d-flex justify-content-center py-5" role="status" aria-live="polite">
       <div class="spinner-grow text-secondary" aria-hidden="true">
         <span class="visually-hidden">Loading customer orders…</span>
@@ -85,18 +96,23 @@
               </span>
             </td>
           </tr>
+          <tr v-if="filteredOrders.length === 0">
+            <td colspan="8" class="text-center text-muted py-4">
+              No orders match your search.
+            </td>
+          </tr>
         </tbody>
       </table>
       <nav
-        v-if="totalPages > 1"
+        v-if="filteredOrders.length > 0"
         class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 pb-3"
         aria-label="Order pages"
       >
         <p class="mb-0" aria-live="polite">
           Showing {{ (currentPage - 1) * pageSize + 1 }}–{{
-            Math.min(currentPage * pageSize, orders.length)
+            Math.min(currentPage * pageSize, filteredOrders.length)
           }}
-          of {{ orders.length }} orders
+          of {{ filteredOrders.length }} orders (10 per page)
         </p>
         <ul class="pagination mb-0">
           <li class="page-item" :class="{ disabled: currentPage === 1 }">
@@ -154,6 +170,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import orderService, { ORDER_STATUSES } from '@/services/orderService'
 
 const orders = ref([])
+const searchQuery = ref('')
 const currentPage = ref(1)
 const pageSize = 10
 const loading = ref(false)
@@ -168,10 +185,35 @@ const statusLabels = {
   completed: 'Completed',
   cancelled: 'Cancelled',
 }
-const totalPages = computed(() => Math.ceil(orders.value.length / pageSize))
+const filteredOrders = computed(() => {
+  const search = searchQuery.value.toLocaleLowerCase()
+  if (!search) return orders.value
+
+  return orders.value.filter((order) => {
+    const customer = order.customer || {}
+    const productDetails = orderProducts(order).flatMap((item) => [item.name, item.category])
+    return [
+      order.id,
+      order.status,
+      order.paymentMethod,
+      customer.name,
+      customer.email,
+      customer.phone,
+      customer.deliveryAddress,
+      ...productDetails,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase().includes(search))
+  })
+})
+const totalPages = computed(() => Math.ceil(filteredOrders.value.length / pageSize))
 const paginatedOrders = computed(() => {
   const startIndex = (currentPage.value - 1) * pageSize
-  return orders.value.slice(startIndex, startIndex + pageSize)
+  return filteredOrders.value.slice(startIndex, startIndex + pageSize)
+})
+
+watch(searchQuery, () => {
+  currentPage.value = 1
 })
 
 watch(totalPages, (pageCount) => {
