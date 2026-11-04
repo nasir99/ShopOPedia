@@ -355,12 +355,33 @@
             </ul>
             <p v-else-if="!reviewsLoading" class="text-muted mt-2">No reviews yet.</p>
             <form v-if="authStore.isAuthenticated" class="mt-3" @submit.prevent="submitReview">
-              <label for="review-rating" class="form-label">Your rating</label>
-              <select id="review-rating" v-model.number="reviewForm.rating" class="form-select mb-2" required>
-                <option v-for="rating in [5, 4, 3, 2, 1]" :key="rating" :value="rating">
-                  {{ rating }} out of 5
-                </option>
-              </select>
+              <fieldset class="mb-2">
+                <legend class="form-label">Your rating</legend>
+                <div class="review-rating">
+                  <template v-for="rating in [1, 2, 3, 4, 5]" :key="rating">
+                    <input
+                      :id="`review-rating-${rating}`"
+                      v-model.number="reviewForm.rating"
+                      class="visually-hidden"
+                      type="radio"
+                      name="review-rating"
+                      :value="rating"
+                      required
+                    />
+                    <label
+                      class="review-rating-star"
+                      :for="`review-rating-${rating}`"
+                      :aria-label="`${rating} out of 5 stars`"
+                      :title="`${rating} out of 5 stars`"
+                    >
+                      {{ rating <= reviewForm.rating ? '★' : '☆' }}
+                    </label>
+                  </template>
+                </div>
+                <span class="visually-hidden" aria-live="polite">
+                  {{ reviewForm.rating }} out of 5 stars selected
+                </span>
+              </fieldset>
               <label for="review-body" class="form-label">Your review</label>
               <textarea
                 id="review-body"
@@ -1385,6 +1406,23 @@ watch(totalPages, (pageCount) => {
 
 .product-details-dialog::backdrop {
   background: rgb(0 0 0 / 60%);
+}
+
+.review-rating {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.review-rating-star {
+  color: #d89000;
+  cursor: pointer;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.review-rating input:focus-visible + .review-rating-star {
+  outline: 3px solid #0a58ca;
+  outline-offset: 2px;
 }
 
 .review-dialog {
